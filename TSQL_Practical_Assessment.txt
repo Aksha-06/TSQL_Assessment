@@ -1,0 +1,101 @@
+1) 
+CREATE FUNCTION Orders_in_Range (
+    @start_year datetime,
+    @end_year datetime	
+)
+RETURNS TABLE
+AS
+RETURN
+SELECT 
+     order_id,
+     customer_id,
+     order_status,
+     store_id
+FROM
+    sales.orders
+WHERE
+    year(order_date) BETWEEN @start_year AND @end_year
+
+SELECT 
+    order_id,
+    customer_id,
+    order_status,
+    store_id
+FROM 
+    Orders_in_Range(2016,2017)
+
+
+
+2)
+CREATE TABLE sales.customers_audits(
+        customer_id INT IDENTITY (1, 1) PRIMARY KEY,
+	first_name VARCHAR (255) NOT NULL,
+	last_name VARCHAR (255) NOT NULL,
+	phone VARCHAR (25),
+	email VARCHAR (255) NOT NULL,
+	street VARCHAR (255),
+	city VARCHAR (50),
+	state VARCHAR (25),
+	zip_code VARCHAR (5),
+    updated_at DATETIME NOT NULL,
+    operation CHAR(3) NOT NULL,
+    CHECK(operation = 'INS' or operation='DEL')
+);
+
+
+CREATE TRIGGER sales.trg_customers_audit
+ON sales.customers
+AFTER INSERT, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO sales.customers_audits(
+        customer_id, 
+        first_name,
+        last_name,
+        phone,
+        email,
+        street,
+        city, 
+        state, 
+        zip_code,
+        updated_at,
+        operation
+    )
+    SELECT
+        i.customer_id, 
+        first_name,
+        last_name,
+        phone,
+        email,
+        street,
+        city, 
+        state, 
+        zip_code,
+        GETDATE(),
+        'INS'
+    FROM
+        inserted i
+    UNION ALL
+    SELECT
+        d.customer_id, 
+        first_name,
+        last_name,
+        phone,
+        email,
+        street,
+        city, 
+        state, 
+        zip_code,
+        GETDATE(),
+        'DEL'
+    FROM
+        deleted d;
+END 
+
+SELECT * FROM  sales.customers;
+
+SELECT * FROM  sales.customers_audits;
+
+DELETE from sales.customers 
+WHERE customer_id = 3;
